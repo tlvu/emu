@@ -15,5 +15,5 @@ dependencies:
 # tests
 - pytest
 - pip:
-  - pywps==4.2.3
+  - -e git+https://github.com/geopython/pywps@master#egg=pywps
   - geomet
