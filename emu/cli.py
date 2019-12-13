@@ -9,9 +9,11 @@ import os
 import psutil
 import click
 from jinja2 import Environment, PackageLoader
+from pywps.app.Service import Service
 from pywps import configuration
+from pywps.watchdog import watchdog
 
-from . import wsgi
+from .wsgi import create_app
 from urllib.parse import urlparse
 
 PID_FILE = os.path.abspath(os.path.join(os.path.curdir, "pywps.pid"))
@@ -140,7 +142,8 @@ def start(config, bind_host, daemon, hostname, port,
     if os.path.exists(PID_FILE):
         click.echo('PID file exists: "{}". Service still running?'.format(PID_FILE))
         os._exit(0)
-    cfgfiles = []
+    # cfgfiles = []
+    cfgfiles = [os.path.join(os.path.dirname(__file__), 'default.cfg')]
     cfgfiles.append(write_user_config(
         wps_hostname=hostname,
         wps_port=port,
@@ -153,7 +156,7 @@ def start(config, bind_host, daemon, hostname, port,
     ))
     if config:
         cfgfiles.append(config)
-    app = wsgi.create_app(cfgfiles)
+    app = create_app(cfgfiles=cfgfiles)
     # let's start the service ...
     # See:
     # * https://github.com/geopython/pywps-flask/blob/master/demo.py
@@ -185,76 +188,6 @@ def start(config, bind_host, daemon, hostname, port,
             t = threading.Thread(target=_run, args=(app, bind_host))
             t.setDaemon(False)
             t.start()
-            watchdog()
+            watchdog(cfgfiles)
         except KeyboardInterrupt:
             pass
-
-
-import time
-from pywps import dblog
-import pywps.processing
-import pywps.configuration as config
-import json
-
-
-def watchdog():
-    config.load_configuration()
-
-    # LOGGER.setLevel(getattr(logging, config.get_config_value('logging', 'level')))
-
-    max_time = int(config.get_config_value('daemon', 'pause'))
-    maxparallel = int(config.get_config_value('server', 'parallelprocesses'))
-
-    while True:
-        # Logging errors and exceptions
-        try:
-            running, stored = dblog.get_process_counts()
-            # LOGGER.info('PyWPS daemon: {} running processes {} stored requests'.format(running, stored))
-            print('PyWPS daemon: {} running processes {} stored requests'.format(running, stored))
-
-            while (running < maxparallel or maxparallel == -1) and stored > 0:
-                launch_process()
-                running, stored = dblog.get_process_counts()
-
-        except Exception as e:
-            # LOGGER.exception("PyWPS daemon failed: {}".format(str(e)))
-            print("PyWPS daemon failed: {}".format(str(e)))
-
-        # The daemon will repeat your tasks according to this variable
-        # it's in second so 60 is 1 minute, 3600 is 1 hour, etc.
-        # time.sleep(max_time
-        time.sleep(2)
-
-
-def launch_process():
-    """Look at the queue of async process, if the queue is not empty launch
-    the next pending request.
-    """
-    try:
-        from pywps.processing.job import Job, JobLauncher
-
-        # LOGGER.debug("Checking for stored requests")
-        print("Checking for stored requests")
-
-        stored_request = dblog.pop_first_stored()
-        if not stored_request:
-            # LOGGER.debug("No stored request found, sleeping")
-            print("No stored request found, sleeping")
-            return
-
-        value = {
-            'process': json.loads(stored_request.process.decode("utf-8")),
-            'wps_request': json.loads(stored_request.request.decode("utf-8"))
-        }
-        job = Job.from_json(value)
-
-        processing_process = pywps.processing.Process(
-            process=job.process,
-            wps_request=job.wps_request,
-            wps_response=job.wps_response)
-        processing_process.start()
-
-    except Exception as e:
-        # LOGGER.exception("Could not run stored process. {}".format(e))
-        print("Could not run stored process. {}".format(e))
-        raise e
