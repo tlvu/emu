@@ -222,7 +222,8 @@ def watchdog():
 
         # The daemon will repeat your tasks according to this variable
         # it's in second so 60 is 1 minute, 3600 is 1 hour, etc.
-        time.sleep(max_time)
+        # time.sleep(max_time
+        time.sleep(2)
 
 
 def launch_process():
