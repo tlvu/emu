@@ -142,8 +142,7 @@ def start(config, bind_host, daemon, hostname, port,
     if os.path.exists(PID_FILE):
         click.echo('PID file exists: "{}". Service still running?'.format(PID_FILE))
         os._exit(0)
-    # cfgfiles = []
-    cfgfiles = [os.path.join(os.path.dirname(__file__), 'default.cfg')]
+    cfgfiles = []
     cfgfiles.append(write_user_config(
         wps_hostname=hostname,
         wps_port=port,

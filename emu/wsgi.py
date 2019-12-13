@@ -5,7 +5,10 @@ from .processes import processes
 
 
 def create_app(cfgfiles=None):
-    service = Service(processes=processes, cfgfiles=cfgfiles)
+    config_files = [os.path.join(os.path.dirname(__file__), 'default.cfg')]
+    if cfgfiles:
+        config_files.extend(cfgfiles)
+    service = Service(processes=processes, cfgfiles=config_files)
     return service
 
 
