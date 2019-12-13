@@ -182,11 +182,12 @@ def start(config, bind_host, daemon, hostname, port,
         # _run(app, bind_host=bind_host)
         import signal
         import threading
+        watchdog = WatchDog(cfgfiles)
         signal.signal(signal.SIGTERM, lambda *args: sys.exit(0))
         try:
             t = threading.Thread(target=_run, args=(app, bind_host))
-            t.setDaemon(False)
+            t.setDaemon(True)
             t.start()
-            WatchDog(cfgfiles).run()
+            watchdog.run()
         except KeyboardInterrupt:
             pass
