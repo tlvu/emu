@@ -11,7 +11,7 @@ import click
 from jinja2 import Environment, PackageLoader
 from pywps.app.Service import Service
 from pywps import configuration
-from pywps.watchdog import watchdog
+from pywps.watchdog import WatchDog
 
 from .wsgi import create_app
 from urllib.parse import urlparse
@@ -187,6 +187,6 @@ def start(config, bind_host, daemon, hostname, port,
             t = threading.Thread(target=_run, args=(app, bind_host))
             t.setDaemon(False)
             t.start()
-            watchdog(cfgfiles)
+            WatchDog(cfgfiles).run()
         except KeyboardInterrupt:
             pass
