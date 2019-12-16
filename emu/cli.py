@@ -7,11 +7,12 @@
 
 import os
 import click
+from werkzeug.serving import run_simple
 from pywps.app.Service import Service
 from pywps import configuration
 from pywps.watchdog import WatchDog
 
-from .wsgi import create_app
+from .application import make_app
 from urllib.parse import urlparse
 
 PID_FILE = os.path.abspath(os.path.join(os.path.curdir, "pywps.pid"))
@@ -33,27 +34,6 @@ def get_host():
         host = parsed_url.netloc
         port = 80
     return host, port
-
-
-def _run(application, bind_host=None, daemon=False):
-    from werkzeug.serving import run_simple
-    # call this *after* app is initialized ... needs pywps config.
-    host, port = get_host()
-    bind_host = bind_host or host
-    # need to serve the wps outputs
-    static_files = {
-        '/outputs': configuration.get_config_value('server', 'outputpath')
-    }
-    run_simple(
-        hostname=bind_host,
-        port=port,
-        application=application,
-        use_debugger=False,
-        use_reloader=False,
-        threaded=True,
-        # processes=2,
-        use_evalex=not daemon,
-        static_files=static_files)
 
 
 @click.group(context_settings=CONTEXT_SETTINGS)
@@ -79,7 +59,26 @@ def start(config, bind_host):
     cfgfiles = []
     if config:
         cfgfiles.append(config)
-    app = create_app(cfgfiles=cfgfiles)
+    app = make_app(cfgfiles=cfgfiles)
+
+    def inner(application, bind_host=None, daemon=False):
+        # call this *after* app is initialized ... needs pywps config.
+        host, port = get_host()
+        bind_host = bind_host or host
+        # need to serve the wps outputs
+        static_files = {
+            '/outputs': configuration.get_config_value('server', 'outputpath')
+        }
+        run_simple(
+            hostname=bind_host,
+            port=port,
+            application=application,
+            use_debugger=False,
+            use_reloader=False,
+            threaded=True,
+            # processes=2,
+            use_evalex=not daemon,
+            static_files=static_files)
     # let's start the service ...
     # See:
     # * https://github.com/geopython/pywps-flask/blob/master/demo.py
@@ -89,7 +88,7 @@ def start(config, bind_host):
     watchdog = WatchDog(cfgfiles)
     signal.signal(signal.SIGTERM, lambda *args: sys.exit(0))
     try:
-        t = threading.Thread(target=_run, args=(app, bind_host))
+        t = threading.Thread(target=inner, args=(app, bind_host))
         t.setDaemon(True)
         t.start()
         watchdog.run()
