@@ -6,7 +6,6 @@ dependencies:
 - pip
 #- pywps=4.2
 - click
-- psutil
 - defusedxml
 # opendap support
 - netcdf4
