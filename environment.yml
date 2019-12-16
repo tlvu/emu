@@ -5,7 +5,6 @@ channels:
 dependencies:
 - pip
 #- pywps=4.2
-- jinja2
 - click
 - psutil
 - defusedxml
