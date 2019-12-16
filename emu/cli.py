@@ -15,8 +15,6 @@ from pywps.watchdog import WatchDog
 from .application import make_app
 from urllib.parse import urlparse
 
-PID_FILE = os.path.abspath(os.path.join(os.path.curdir, "pywps.pid"))
-
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
 
@@ -56,10 +54,10 @@ def start(config, bind_host):
     """Start PyWPS service.
     This service is by default available at http://localhost:5000/wps
     """
-    cfgfiles = []
     if config:
-        cfgfiles.append(config)
-    app = make_app(cfgfiles=cfgfiles)
+        if 'PYWPS_CFG' not in os.environ:
+            os.environ['PYWPS_CFG'] = config
+    app = make_app()
 
     def inner(application, bind_host=None, daemon=False):
         # call this *after* app is initialized ... needs pywps config.
@@ -85,7 +83,7 @@ def start(config, bind_host):
     # * http://werkzeug.pocoo.org/docs/0.14/serving/
     import signal
     import threading
-    watchdog = WatchDog(cfgfiles)
+    watchdog = WatchDog()
     signal.signal(signal.SIGTERM, lambda *args: sys.exit(0))
     try:
         t = threading.Thread(target=inner, args=(app, bind_host))
