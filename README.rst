@@ -28,3 +28,4 @@ Emu (the bird)
 Emu is a Python package with some test proccess for Web Processing Services (WPS). Currently it is using the `PyWPS 4.x <http://pywps.org/>`_ server.
 
 Full `documentation <http://emu.readthedocs.io/en/latest/>`_ is available on ReadTheDocs or in the docs directory.
+
